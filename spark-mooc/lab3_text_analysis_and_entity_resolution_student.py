@@ -919,13 +919,22 @@ googleNorms = (googleWeightsRDD
 googleNormsBroadcast = sc.broadcast(googleNorms.collectAsMap())
 
 
+# In[38]:
+
+# TEST Compute Norms for the weights from the full datasets (4c)
+Test.assertTrue(isinstance(amazonNormsBroadcast, Broadcast), 'incorrect amazonNormsBroadcast')
+Test.assertEquals(len(amazonNormsBroadcast.value), 1363, 'incorrect amazonNormsBroadcast.value')
+Test.assertTrue(isinstance(googleNormsBroadcast, Broadcast), 'incorrect googleNormsBroadcast')
+Test.assertEquals(len(googleNormsBroadcast.value), 3226, 'incorrect googleNormsBroadcast.value')
+
+
 # ### **(4d) Create inverted indicies from the full datasets**
 # #### Build inverted indices of both data sources.
 # #### The steps you should perform are:
 # * #### Create an invert function that given a pair of (ID/URL, TF-IDF weighted token vector), returns a list of pairs of (token, ID/URL). Recall that the TF-IDF weighted token vector is a Python dictionary with keys that are tokens and values that are weights.
 # * #### Use your invert function to convert the full Amazon and Google TF-IDF weighted token vector datasets into two RDDs where each element is a pair of a token and an ID/URL that contain that token. These are inverted indicies.
 
-# In[38]:
+# In[39]:
 
 # TODO: Replace <FILL IN> with appropriate code
 def invert(record):
@@ -955,7 +964,7 @@ print 'There are %s Amazon inverted pairs and %s Google inverted pairs.' % (amaz
                                                                             googleInvPairsRDD.count())
 
 
-# In[39]:
+# In[40]:
 
 # TEST Create inverted indicies from the full datasets (4d)
 invertedPair = invert((1, {'foo': 2}))
@@ -970,7 +979,7 @@ Test.assertEquals(googleInvPairsRDD.count(), 77678, 'incorrect googleInvPairsRDD
 # * #### We need a mapping from (ID, URL) to token, so create a function that will swap the elements of the RDD you just created to create this new RDD consisting of ((ID, URL), token) pairs.
 # * #### Finally, create an RDD consisting of pairs mapping (ID, URL) to all the tokens the pair shares in common
 
-# In[40]:
+# In[41]:
 
 # TODO: Replace <FILL IN> with appropriate code
 def swap(record):
@@ -995,7 +1004,7 @@ commonTokens = (amazonInvPairsRDD
 print 'Found %d common tokens' % commonTokens.count()
 
 
-# In[41]:
+# In[42]:
 
 # TEST Identify common tokens from the full dataset (4e)
 Test.assertEquals(commonTokens.count(), 2441100, 'incorrect commonTokens.count()')
@@ -1008,7 +1017,7 @@ Test.assertEquals(commonTokens.count(), 2441100, 'incorrect commonTokens.count()
 # * #### Create a `fastCosinesSimilarity` function that takes in a record consisting of the pair ((Amazon ID, Google URL), tokens list) and computes the sum for each of the tokens in the token list of the products of the Amazon weight for the token times the Google weight for the token. The sum should then be divided by the norm for the Google URL and then divided by the norm for the Amazon ID. The function should return this value in a pair with the key being the (Amazon ID, Google URL). *Make sure you use broadcast variables you created for both the weights and norms*
 # * #### Apply your `fastCosinesSimilarity` function to the common tokens from the full dataset
 
-# In[42]:
+# In[43]:
 
 # TODO: Replace <FILL IN> with appropriate code
 amazonWeightsBroadcast = sc.broadcast(amazonWeightsRDD.collectAsMap())
@@ -1041,7 +1050,7 @@ similaritiesFullRDD = (commonTokens
 print similaritiesFullRDD.count()
 
 
-# In[43]:
+# In[44]:
 
 # TEST Identify common tokens from the full dataset (4f)
 similarityTest = similaritiesFullRDD.filter(lambda ((aID, gURL), cs): aID == 'b00005lzly' and gURL == 'http://www.google.com/base/feeds/snippets/13823221823254120257').collect()
@@ -1064,7 +1073,7 @@ Test.assertEquals(similaritiesFullRDD.count(), 2441100, 'incorrect similaritiesF
 # * #### From this RDD, we create an RDD consisting of only the similarity scores
 # * #### To look up the similarity scores for true duplicates, we perform a left outer join using the `goldStandard` RDD and `simsFullRDD` and extract the
 
-# In[44]:
+# In[45]:
 
 # Create an RDD of ((Amazon ID, Google URL), similarity score)
 simsFullRDD = similaritiesFullRDD.map(lambda x: ("%s %s" % (x[0][0], x[0][1]), x[1]))
@@ -1101,7 +1110,7 @@ assert(trueDupSimsRDD.count() == 1300)
 # * #### Now, for each similarity score, we can compute the false positives. We do this by adding each similarity score to the appropriate bin of the vector. Then we remove true positives from the vector by using the gold standard data.
 # * #### We define functions for computing false positive and negative and true positives, for a given threshold.
 
-# In[45]:
+# In[46]:
 
 from pyspark.accumulators import AccumulatorParam
 class VectorAccumulatorParam(AccumulatorParam):
@@ -1169,7 +1178,7 @@ def truepos(threshold):
 # [precision-recall]: https://en.wikipedia.org/wiki/Precision_and_recall
 # [f-measure]: https://en.wikipedia.org/wiki/Precision_and_recall#F-measure
 
-# In[46]:
+# In[47]:
 
 # Precision = true-positives / (true-positives + false-positives)
 # Recall = true-positives / (true-positives + false-negatives)
@@ -1192,7 +1201,7 @@ def fmeasure(threshold):
 # ### **(5c) Line Plots**
 # #### We can make line plots of precision, recall, and F-measure as a function of threshold value, for thresholds between 0.0 and 1.0.  You can change `nthresholds` (above in part **(5a)**) to change the threshold values to plot.
 
-# In[47]:
+# In[48]:
 
 thresholds = [float(n) / nthresholds for n in range(0, nthresholds)]
 falseposDict = dict([(t, falsepos(t)) for t in thresholds])
