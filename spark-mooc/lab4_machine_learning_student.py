@@ -579,18 +579,26 @@ Test.assertTrue(abs(testAvgRMSE - 1.12036693569) < 0.000001,
 # #### **(3a) Your Movie Ratings**
 # #### To help you provide ratings for yourself, we have included the following code to list the names and movie IDs of the 50 highest-rated movies from `movieLimitedAndSortedByRatingRDD` which we created in part 1 the lab.
 
-# In[21]:
+# In[34]:
 
 print 'Most rated movies:'
 print '(average rating, movie name, number of reviews)'
 
-for ratingsTuple in movieLimitedAndSortedByRatingRDD.take(50):
+bestMoviesRDD = (movieLimitedAndSortedByRatingRDD
+                 .map(lambda l: (l[1], l[0]))
+                 .join(moviesRDD.map(lambda l: (l[1], l[0])))
+                )
+
+                
+
+#for ratingsTuple in movieLimitedAndSortedByRatingRDD.take(50):
+for ratingsTuple in bestMoviesRDD.takeOrdered(50, key=lambda x: -x[1][0]):
     print ratingsTuple
 
 
 # #### The user ID 0 is unassigned, so we will use it for your ratings. We set the variable `myUserID` to 0 for you. Next, create a new RDD `myRatingsRDD` with your ratings for at least 10 movie ratings. Each entry should be formatted as `(myUserID, movieID, rating)` (i.e., each entry should be formatted in the same way as `trainingRDD`).  As in the original dataset, ratings should be between 1 and 5 (inclusive). If you have not seen at least 10 of these movies, you can increase the parameter passed to `take()` in the above cell until there are 10 movies that you have seen (or you can also guess what your rating would be for movies you have not seen).
 
-# In[22]:
+# In[36]:
 
 # TODO: Replace <FILL IN> with appropriate code
 myUserID = 0
@@ -600,17 +608,18 @@ myRatedMovies = [
      # The format of each line is (myUserID, movie ID, your rating)
      # For example, to give the movie "Star Wars: Episode IV - A New Hope (1977)" a five rating, you would add the following line:
      #   (myUserID, 260, 5),
-    (myUserID, 1218, 5),
-    (myUserID, 1088, 5),
-    (myUserID, 1248, 5),
-    (myUserID, 789, 5),
-    (myUserID, 633, 5),
-    (myUserID, 546, 5),
-    (myUserID, 587, 5),
-    (myUserID, 603, 3),
-    (myUserID, 1171, 4),
-    (myUserID, 1039, 3)
+    (myUserID, 318, 5),
+    (myUserID, 1704, 5),
+    (myUserID, 527, 5),
+    (myUserID, 2324, 5),
+    (myUserID, 608, 5),
+    (myUserID, 1089, 3),
+    (myUserID, 2762, 1),
+    (myUserID, 296, 4),
+    (myUserID, 1288, 4),
+    (myUserID, 1225, 5)
     ]
+
 myRatingsRDD = sc.parallelize(myRatedMovies)
 print 'My movie ratings: %s' % myRatingsRDD.take(10)
 
@@ -618,7 +627,7 @@ print 'My movie ratings: %s' % myRatingsRDD.take(10)
 # #### **(3b) Add Your Movies to Training Dataset**
 # #### Now that you have ratings for yourself, you need to add your ratings to the `training` dataset so that the model you train will incorporate your preferences.  Spark's [union()](http://spark.apache.org/docs/latest/api/python/pyspark.rdd.RDD-class.html#union) transformation combines two RDDs; use `union()` to create a new training dataset that includes your ratings and the data in the original training dataset.
 
-# In[23]:
+# In[37]:
 
 # TODO: Replace <FILL IN> with appropriate code
 trainingWithMyRatingsRDD = trainingRDD.union(myRatingsRDD)
@@ -631,7 +640,7 @@ assert (trainingWithMyRatingsRDD.count() - trainingRDD.count()) == myRatingsRDD.
 # #### **(3c) Train a Model with Your Ratings**
 # #### Now, train a model with your ratings added and the parameters you used in in part (2c): `bestRank`, `seed=seed`, `iterations=iterations`, and `lambda_=regularizationParameter` - make sure you include **all** of the parameters.
 
-# In[24]:
+# In[38]:
 
 # TODO: Replace <FILL IN> with appropriate code
 myRatingsModel = ALS.train(trainingWithMyRatingsRDD, bestRank, seed=seed, iterations=iterations,
@@ -644,7 +653,7 @@ myRatingsModel = ALS.train(trainingWithMyRatingsRDD, bestRank, seed=seed, iterat
 # * #### Use `myRatingsModel.predictAll()` to predict rating values for the `testForPredictingRDD` test dataset, set this as `predictedTestMyRatingsRDD`
 # * #### For validation, use the `testRDD`and your `computeError` function to compute the RMSE between `testRDD` and the `predictedTestMyRatingsRDD` from the model.
 
-# In[25]:
+# In[39]:
 
 # TODO: Replace <FILL IN> with appropriate code
 predictedTestMyRatingsRDD = myRatingsModel.predictAll(testForPredictingRDD)
@@ -658,7 +667,7 @@ print 'The model had a RMSE on the test set of %s' % testRMSEMyRatings
 # * #### Use the Python list `myRatedMovies` to transform the `moviesRDD` into an RDD with entries that are pairs of the form (myUserID, Movie ID) and that does not contain any movies that you have rated. This transformation will yield an RDD of the form: `[(0, 1), (0, 2), (0, 3), (0, 4)]`. Note that you can do this step with one RDD transformation.
 # * #### For the prediction step, use the input RDD, `myUnratedMoviesRDD`, with myRatingsModel.predictAll() to predict your ratings for the movies.
 
-# In[26]:
+# In[40]:
 
 # TODO: Replace <FILL IN> with appropriate code
 
@@ -681,7 +690,7 @@ predictedRatingsRDD = myRatingsModel.predictAll(myUnratedMoviesRDD)
 # * #### Use RDD transformations with `predictedRDD` and `movieCountsRDD` to yield an RDD with tuples of the form (Movie ID, (Predicted Rating, number of ratings)): `[(2050, (0.6694097486155939, 44)), (10, (5.29762541533513, 418)), (2060, (0.5055259373841172, 97))]`
 # * #### Use RDD transformations with `predictedWithCountsRDD` and `moviesRDD` to yield an RDD with tuples of the form (Predicted Rating, Movie Name, number of ratings), _for movies with more than 75 ratings._ For example: `[(7.983121900375243, u'Under Siege (1992)'), (7.9769201864261285, u'Fifth Element, The (1997)')]`
 
-# In[28]:
+# In[41]:
 
 # TODO: Replace <FILL IN> with appropriate code
 
